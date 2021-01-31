@@ -76,4 +76,64 @@ class Tuning extends React.Component {
     }
 }
 
-ReactDOM.render(<Tuning />, document.getElementById("root"));
+
+
+class NoteDetector extends React.Component {
+
+    async getAudioPermission(){
+        let stream = null;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+            
+            window.streamReference = stream;
+
+            const mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.start();
+            console.log(mediaRecorder.state)
+
+            let chunks = [];
+            mediaRecorder.ondataavailable = function(e){
+                chunks.push(e.data);
+            };
+
+            document.getElementById("stop").onclick = function(){
+                if(mediaRecorder.state !== "inactive"){
+                    mediaRecorder.stop();
+                    console.log(mediaRecorder.state);
+                }
+            }
+
+            mediaRecorder.onstop = function(e){
+                if (!window.streamReference) return;
+
+                window.streamReference.getAudioTracks().forEach(function(track) {
+                    track.stop();
+                });
+            
+                window.streamReference = null;
+            } 
+        } catch(err){
+            console.log("The following getUserMedia error occured: " + err);
+        }
+
+    }
+
+
+    render(){
+        return(
+            <div id="listening">
+                <button type="button" id="start" onClick={() => this.getAudioPermission()}>Turn on the tuner</button>
+                <button type="button" id="stop">Turn off the tuner</button>
+            </div>
+        );
+    }
+
+}
+
+ReactDOM.render(
+<div>
+    <Tuning></Tuning>
+    <NoteDetector></NoteDetector>    
+</div>, 
+document.getElementById("root"));
