@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300&family=Poppins:wght@300&display=swap');
+
+.notes {
+    border: solid 1px black;
+    border-radius: 50%;
+    text-align: center;
+    background-color:slategrey ;
+    color:whitesmoke;
+    font-size: 20px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.notes:hover {
+    transition: 500ms;
+    cursor: pointer;
+    background-color:#95b653;
+    color: white;
+}
+
+#container-strings {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+}
+
+#container-strings img {
+    width: 100%;
+    height: auto;
+}
+
+#container-strings #note-0 {
+    position: absolute;
+    top: 62%;
+    right: 70%;
+}
+
+#container-strings #note-1 {
+    position: absolute;
+    top: 53%;
+    right: 60%;
+}
+
+#container-strings #note-2 {
+    position: absolute;
+    top: 45%;
+    right: 49%;
+}
+
+#container-strings #note-3 {
+    position: absolute;
+    top: 38%;
+    right: 39%;
+}
+
+#container-strings #note-4 {
+    position: absolute;
+    top: 31%;
+    right: 30%;
+}
+
+#container-strings #note-5 {
+    position: absolute;
+    top: 25%;
+    right: 21%;
+}
+
+@media screen and (max-width: 600px) {
+    #container-strings #note-0 {
+        position: absolute;
+        top: 60%;
+        right: 69%;
+    }
+    
+    #container-strings #note-1 {
+        position: absolute;
+        top: 51%;
+        right: 58%;
+    }
+    
+    #container-strings #note-2 {
+        position: absolute;
+        top: 43%;
+        right: 47%;
+    }
+    
+    #container-strings #note-3 {
+        position: absolute;
+        top: 36%;
+        right: 37%;
+    }
+    
+    #container-strings #note-4 {
+        position: absolute;
+        top: 29%;
+        right: 28%;
+    }
+
+    #container-strings #note-5 {
+        position: absolute;
+        top: 23%;
+        right: 19%;
+    }
+
+}
