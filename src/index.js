@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import '../src/index.css';
-import guitarPic from '../src/1-front.jpg';
+import NoteDetector from './tunerUtil'; 
+import guitarPic from '../src/1-front.jpg';//the picture of the guitar neck
 
 //component to render the buttons for the different tuning options
 class TuingOptions extends React.Component {
@@ -61,10 +62,13 @@ class Tuning extends React.Component {
     }
 
     render(){
+        
+        //creating a "Tuning Display" button from every element in the current tuning array
+        //The onClick function gets "i", which is the id (aka index in the current tuning array) of the button clicked.
         const tuning_notes = this.state.current_tuning.tuning.map((value,index) => 
            <TuningDisplay key={index} note={value} id={index} onClick={(i) => this.handleTuningNoteClick(i)}/> 
         );
-
+        //creating a "TuningOptions" button for all the tuning options in this state's tuning_options
         const tuning_options = this.state.tuning_options.map((value, index) =>
             <TuingOptions key={index} tuning_name={value.name} id={index} onClick={(i) => this.handleTuningOptionClick(i)}/>
         );
@@ -78,72 +82,12 @@ class Tuning extends React.Component {
                 <div>
                     {tuning_options}
                 </div> 
+                <div>
+                    <NoteDetector></NoteDetector>  {/*refer to file tunerUtil.js in ./src for this component*/}
+                </div>
             </div>
         );
     }
 }
 
-
-//component to render the note detector section of the website
-class NoteDetector extends React.Component {
-
-    //method to access user's microphone and obtain the audio file of them playing a note
-    async getAudioPermission(){
-        let stream = null;
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
-            
-            window.streamReference = stream;//this is done to handle the red dot that browsers display when recording audio
-
-            const mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.start();
-            console.log(mediaRecorder.state)
-
-            let chunks = [];
-            mediaRecorder.ondataavailable = function(e){
-                chunks.push(e.data);
-            };
-
-            document.getElementById("stop").onclick = function(){
-                if(mediaRecorder.state !== "inactive"){
-                    mediaRecorder.stop();
-                    console.log(mediaRecorder.state);
-                }
-            }
-
-            mediaRecorder.onstop = function(e){
-
-                if (!window.streamReference) return;
-
-                window.streamReference.getAudioTracks().forEach(function(track) {
-                    track.stop();
-                });
-            
-                window.streamReference = null;
-
-            } 
-        } catch(err){
-            console.log("The following getUserMedia error occured: " + err);
-        }
-
-    }
-
-
-    render(){
-        return(
-            <div id="listening">
-                <button type="button" id="start" onClick={() => this.getAudioPermission()}>Turn on the tuner</button>
-                <button type="button" id="stop">Turn off the tuner</button>
-            </div>
-        );
-    }
-
-}
-
-ReactDOM.render(
-<div>
-    <Tuning></Tuning>
-    <NoteDetector></NoteDetector>    
-</div>, 
-document.getElementById("root"));
+ReactDOM.render( <div><Tuning></Tuning></div>, document.getElementById("root") );
