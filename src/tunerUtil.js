@@ -1,70 +1,64 @@
 import { render } from '@testing-library/react';
-import React from 'react';
+import React, { useRef, useEffect  } from 'react';
 import '../src/index.css';
+import Canvas from './Canvas';
 
 //component to render the note detector section of the website
 class NoteDetector extends React.Component {
 
+    constructor(props){
+        super(props);
+        this.state = {
+            dataArr: [],
+        }
+        this.getAudioPermission = this.getAudioPermission.bind(this);
+    }
+
     //method to access user's microphone and obtain the audio file of them playing a note
     //credit to https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API/Using_the_MediaStream_Recording_API
     async getAudioPermission(){
+
         let stream = null;
+        var instance = this;
+        
         try {
-            // passing the constraint that we only need to record audio to the getUserMedia method of the mediaDevices object. getUserMedia prompts the user for permission to use a 
-            // input which produces a MediaStream with tracks containing the specified types of media. A Promise is returned that resolves to a MediaStream object 
+
+            //getting the user's permission to record audio
             stream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
             
-            //Once getUserMedia creates a media stream stored in "stream", we create a new MediaRecorder instance and pass it the stream directly. this will be my entry point to using the MediaRecorder API. The stream
-            //is now ready to be captured into a Blob, in the default encoding format of the browser
+            const mediaRecorder = new MediaRecorder(stream);//Media Stream Recording API
+
+            mediaRecorder.start(110);//ondataavailable to run every X milliseconds
+
+            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();//Web Audio API
+            var analyzer = audioCtx.createAnalyser();//Analyzer node
+
+            let source = audioCtx.createMediaStreamSource(stream);//setting the stream as the source or input to be analyzed
+            source.connect(analyzer);//linking the analyzer to the sound stream
             
-            const mediaRecorder = new MediaRecorder(stream);
+            analyzer.fftSize = 2048;//unsigned long, size of FFT to be used to find freq. domain
+            let bufferLength = analyzer.frequencyBinCount;//half the fftSize property
 
-            //method to start recording the stream when the "Turn on tuner" button is pressed
-            mediaRecorder.start();
-            //1000 IS A TIMESLICE PROPERTY. A ondataavailable EVENT IS FIRED every X ms AND A BLOB OF DATA IS PASSED TO THE EVENT HANDLER. 
-
-            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            var analyzer = audioCtx.createAnalyser();
-
-            //SUS
-            let source = audioCtx.createMediaStreamSource(stream);
-            source.connect(analyzer);
-            
-
-            //creating an event handler to collect the audio data
             mediaRecorder.ondataavailable = function(e){
-
-                let uint8view = new Uint8Array(2048);
-                analyzer.getByteTimeDomainData(uint8view);
+                console.log(audioCtx);
+                /*********************************************************** */
+                //FYI e.data holds the blob of audio data that was recorder in the X ms timeinterval specified in mediarecorder.start(XX)
+                /*********************************************************** */
+                let uint8view = new Uint8Array(bufferLength);//array in which the analyzer node's method will store data
+                analyzer.getByteFrequencyData(uint8view);
+                //getByteFrequency will fill in the array uint8view with frequency data 
+                //Each item in the array represents the DECIBEL value for a specific frequency
+                //Each item is an integer on a scale from 0 to 255
+                //The frequencies are spread linearly from 0 to 1/2 of the sample rate
                 console.log(uint8view);
+            }
 
-            //     chunks.push(e.data);                
-            //     const blob = chunks[0];
-
-            //     blob.arrayBuffer().then(array_buffer => {
-            //         let uint8view = new Uint8Array(2048);
-            //         analyzer.getByteTimeDomainData(uint8view);
-            //         console.log(uint8view);
-            //     }
-            // );
-
-            //     chunks = [];
-
-                // blob.arrayBuffer()
-                //     .then(arrayBuffer => audio_context.decodeAudioData(arrayBuffer))
-                //     .then(audio_buffer => console.log(audio_buffer));
-                
-            //};
-
-            //method to stop recording when the "Turn off the tuner" button is clicked
-
-            // document.getElementById("stop").onclick = function(){
-            //     if(mediaRecorder.state !== "inactive"){
-            //         mediaRecorder.stop();
-            //         console.log(mediaRecorder.state);
-            //     }
-            // }
-
+            document.getElementById("stop").onclick = function(){
+                if(mediaRecorder.state !== "inactive"){
+                    mediaRecorder.stop();
+                    console.log(mediaRecorder.state);
+                }
+            }
         
         } catch(err){
             console.log("The following getUserMedia error occured: " + err);
@@ -77,10 +71,11 @@ class NoteDetector extends React.Component {
             <div id="listening">
                 <button type="button" id="start" onClick={() => this.getAudioPermission()}>Turn on the tuner</button>
                 <button type="button" id="stop">Turn off the tuner</button>
+                {/* <canvas ref="canvas" width={300} height={300}></canvas> */}
+                {/* <Canvas></Canvas> */}
             </div>
         );
     }
-
 }
 
 export default NoteDetector;
