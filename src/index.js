@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import '../src/index.css';
-import NoteDetector from './tunerUtil'; 
+import NoteDetector from './tunerUtil';
 import guitarPic from '../src/1-front.jpg';//the picture of the guitar neck
 
 //component to render the buttons for the different tuning options

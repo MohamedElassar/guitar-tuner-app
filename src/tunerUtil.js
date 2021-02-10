@@ -1,96 +1,105 @@
 import React from 'react';
 import '../src/index.css';
+import {MaxAndIndexOfMax, updateCanvas, clearCanvas} from './helper';
+
+//variable to control the setInterval method that will update the canvas by calling the updateCanvas function in ./helper to reflect audio data
+//needs to be a global variable so it can be used to turn off the audio recording if the user turns off the tuner
+var intervalID; 
 
 //component to render the note detector section of the website
 class NoteDetector extends React.Component {
 
-    //method to access user's microphone and obtain the audio file of them playing a note
-    //credit to https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API/Using_the_MediaStream_Recording_API
+    constructor(props){
+        super(props);
+        this.state = {
+            canvas: "",
+            button_text: "Turn On The Tuner",
+            audioContextState: "suspended",
+            audioContext: new (window.AudioContext || window.webkitAudioContext)()
+        }
+        this.getAudioPermission = this.getAudioPermission.bind(this);
+    }
+
+    //method to access user's microphone and obtain the audio file of them playing a note. Utilizes the Web Audio API to collect and analyze audio data in real time
+    //Documentation can be found at https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API/Using_the_MediaStream_Recording_API
     async getAudioPermission(){
-        let stream = null;
-        try {
-            // passing the constraint that we only need to record audio to the getUserMedia method of the mediaDevices object. getUserMedia prompts the user for permission to use a 
-            // input which produces a MediaStream with tracks containing the specified types of media. A Promise is returned that resolves to a MediaStream object 
-            stream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+
+        let audioCtx = this.state.audioContext;
+        let audioCtx_state = this.state.audioContextState;
+
+        console.log(audioCtx);
+
+        if(audioCtx_state === "suspended"){ //if true, we will resume our audio context
+
+            let stream = null;
+    
+            try {
+                //getting the user's permission to record audio
+                stream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+                
+                // const mediaRecorder = new MediaRecorder(stream);//Media Stream Recording API
+                // mediaRecorder.start(110);//ondataavailable to run every X milliseconds
+                    
+                await audioCtx.resume();//resume the audio context, returns a void Promise
+                var analyzer = audioCtx.createAnalyser();//create an Analyzer node
+    
+                let source = audioCtx.createMediaStreamSource(stream);//setting the stream as the source or input to be analyzed
+                source.connect(analyzer);//linking the analyzer to the sound stream
+                
+                analyzer.fftSize = 2048;//unsigned long, size of FFT to be used to find freq. domain
+                let bufferLength = analyzer.frequencyBinCount;//half the fftSize property
+                let uint8view = new Uint8Array(bufferLength);//array in which the analyzer node's method will store data
+    
+                let sampleRate = audioCtx.sampleRate;//storing the audio context's sample rate
+        
+                this.setState({
+                    audioContextState: "running",
+                    button_text: "Turn Off The Tuner"
+                });
+                
+                //update the canvas every X ms with the new audio data. Refer to ./helper.js
+                //intervalID stores the setInterval ID so that the interval can be cleared later when the user stops the tuner. Otherwise, this will be called forever
+                intervalID = setInterval(updateCanvas, 50, this.state.canvas, analyzer, uint8view, bufferLength);
             
-            //this is done to handle the red dot that browsers display when recording audio. Later in the code, I will turn the red dot off when the user stops recording. Alternatively, we can just keep
-            //the red light on as a way to inform the user that this website is recording their voice input
-            window.streamReference = stream;
-
-            //Once getUserMedia creates a media stream stored in "stream", we create a new MediaRecorder instance and pass it the stream directly. this will be my entry point to using the MediaRecorder API. The stream
-            //is now ready to be captured into a Blob, in the default encoding format of the browser
-            const mediaRecorder = new MediaRecorder(stream);
-
-            //method to start recording the stream when the "Turn on tuner" button is pressed
-            mediaRecorder.start(1000);
-            //1000 IS A TIMESLICE PROPERTY. A ondataavailable EVENT IS FIRED every X ms AND A BLOB OF DATA IS PASSED TO THE EVENT HANDLER. 
- 
-            console.log(mediaRecorder.state)//mediarecorder.state should have a value of "recording" when we start recording
-
-            let chunks = [];
-            var AudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            var analyzer = AudioContext.createAnalyser();
-
-            //creating an event handler to collect the audio data
-            mediaRecorder.ondataavailable = function(e){
-
-                chunks.push(e.data);                
-                const blob = chunks[0];
-
-                blob.arrayBuffer().then(array_buffer => {
-                    let uint8view = new Uint8Array(array_buffer);
-                    analyzer.getByteTimeDomainData(uint8view);
-                    console.log(analyzer);
-                }
-            );
-
-                // let audio_context = new AudioContext();
-
-                // blob.arrayBuffer()
-                //     .then(arrayBuffer => audio_context.decodeAudioData(arrayBuffer))
-                //     .then(audio_buffer => console.log(audio_buffer));
-
-                chunks = [];
-            };
-
-            //method to stop recording when the "Turn off the tuner" button is clicked
-            document.getElementById("stop").onclick = function(){
-                if(mediaRecorder.state !== "inactive"){//state should have a value of "inactive"
-                    //when the stop method is called, a stop event is fired. See mediaRecorder.onstop
-                    mediaRecorder.stop();
-                    console.log(mediaRecorder.state);
-                }
+            } catch(err){
+                console.log("The following getUserMedia error occured: " + err);//catching any errors that may have been generated due to a failure in gaining permission to record audio, etc.
             }
 
-            mediaRecorder.onstop = function(e){
-
-                //This section is used to turn off the red light that browsers display when you start recording audio/video
-                //I didn't like that it stayed on after recording stops, so the below code removes the red light ONLY after stopping
-                //the recording. I'm not sure if this is good practice, and might just end up removing this section entirely
-                if (!window.streamReference) return;
-
-                window.streamReference.getAudioTracks().forEach(function(track) {
-                    track.stop();
-                });
+        } else if(audioCtx_state === "running"){
             
-                window.streamReference = null;
+            //stop the "setInterval" method that was being called every X ms to update the canvas with audio data
+            clearInterval(intervalID);
 
-            } 
-        } catch(err){
-            console.log("The following getUserMedia error occured: " + err);
+            //clear the canvas and just draw a horizontal black line
+            clearCanvas(this.state.canvas);
+
+            //suspend the audio context. It will be resumed if the user clicks the button again
+            await this.state.audioContext.suspend();
+
+            this.setState({
+                audioContextState: "suspended",
+                button_text: "Turn On The Tuner"
+            });
         }
+              
+    }
 
+    //just adding a reference to the canvas that was rendered to the DOM to be able to update it later
+    componentDidMount(){
+        this.setState({
+            canvas: document.getElementById("canvas")
+        });
     }
 
     render(){
         return(
             <div id="listening">
-                <button type="button" id="start" onClick={() => this.getAudioPermission()}>Turn on the tuner</button>
-                <button type="button" id="stop">Turn off the tuner</button>
+                <button type="button" id="start" onClick={() => this.getAudioPermission()}>{this.state.button_text}</button>
+                {/* <button type="button" id="stop" onClick={(id) => this.getAudioPermission("stop")}>Turn off the tuner</button> */}
+                <canvas id="canvas" width={300} height={300}></canvas>
             </div>
         );
     }
-
 }
 
 export default NoteDetector;
