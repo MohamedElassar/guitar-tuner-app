@@ -1,6 +1,6 @@
 import React from 'react';
 import '../src/index.css';
-import {MaxAndIndexOfMax, updateCanvas, clearCanvas} from './helper';
+import {updateCanvas, clearCanvas} from './helper';
 
 //variable to control the setInterval method that will update the canvas by calling the updateCanvas function in ./helper to reflect audio data
 //needs to be a global variable so it can be used to turn off the audio recording if the user turns off the tuner
@@ -29,25 +29,22 @@ class NoteDetector extends React.Component {
 
         console.log(audioCtx);
 
-        if(audioCtx_state === "suspended"){ //if true, we will resume our audio context
+        if(audioCtx_state === "suspended"){ //if true, we will resume our audio context. Will also work the first time we press "Turn on tuner"
 
             let stream = null;
     
             try {
                 //getting the user's permission to record audio
                 stream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
-                
-                // const mediaRecorder = new MediaRecorder(stream);//Media Stream Recording API
-                // mediaRecorder.start(110);//ondataavailable to run every X milliseconds
                     
-                await audioCtx.resume();//resume the audio context, returns a void Promise
-                var analyzer = audioCtx.createAnalyser();//create an Analyzer node
+                await audioCtx.resume();//resume the audio context, returns a Promise that resolves to void
+                var analyzer = audioCtx.createAnalyser();//create an Analyzer node - refer to Web Audio APIs documentation
     
                 let source = audioCtx.createMediaStreamSource(stream);//setting the stream as the source or input to be analyzed
                 source.connect(analyzer);//linking the analyzer to the sound stream
                 
                 analyzer.fftSize = 2048;//unsigned long, size of FFT to be used to find freq. domain
-                let bufferLength = analyzer.frequencyBinCount;//half the fftSize property
+                let bufferLength = analyzer.frequencyBinCount;//half the fftSize property. A property required for the Fast Fourier Transform analysis
                 let uint8view = new Uint8Array(bufferLength);//array in which the analyzer node's method will store data
     
                 let sampleRate = audioCtx.sampleRate;//storing the audio context's sample rate
@@ -57,9 +54,9 @@ class NoteDetector extends React.Component {
                     button_text: "Turn Off The Tuner"
                 });
                 
-                //update the canvas every X ms with the new audio data. Refer to ./helper.js
-                //intervalID stores the setInterval ID so that the interval can be cleared later when the user stops the tuner. Otherwise, this will be called forever
-                intervalID = setInterval(updateCanvas, 50, this.state.canvas, analyzer, uint8view, bufferLength);
+                //update the canvas every X ms with the new audio data. Refer to ./helper.js for implementation of the updateCanvas function
+                //intervalID stores the setInterval ID so that the interval can be cleared later (using clearInterval(intervalID) method) when the user stops the tuner. Otherwise, this will be called forever
+                intervalID = setInterval(updateCanvas, 10, this.state.canvas, analyzer, uint8view, bufferLength);
             
             } catch(err){
                 console.log("The following getUserMedia error occured: " + err);//catching any errors that may have been generated due to a failure in gaining permission to record audio, etc.
@@ -84,8 +81,11 @@ class NoteDetector extends React.Component {
               
     }
 
-    //just adding a reference to the canvas that was rendered to the DOM to be able to update it later
+    //Creating the canvas look I want and storing a reference to the canvas that was rendered to the DOM in the state to be able to update it later
     componentDidMount(){
+        //calling the helper function that's meant to clear the canvas after the user turns off the tuner. I want to do the same to the canvas when it first renders
+        clearCanvas(document.getElementById("canvas"));
+        
         this.setState({
             canvas: document.getElementById("canvas")
         });
@@ -95,7 +95,6 @@ class NoteDetector extends React.Component {
         return(
             <div id="listening">
                 <button type="button" id="start" onClick={() => this.getAudioPermission()}>{this.state.button_text}</button>
-                {/* <button type="button" id="stop" onClick={(id) => this.getAudioPermission("stop")}>Turn off the tuner</button> */}
                 <canvas id="canvas" width={300} height={300}></canvas>
             </div>
         );
