@@ -27,7 +27,7 @@ class NoteDetector extends React.Component {
         let audioCtx = this.state.audioContext;
         let audioCtx_state = this.state.audioContextState;
 
-        console.log(audioCtx);
+        // console.log(audioCtx);
 
         if(audioCtx_state === "suspended"){ //if true, we will resume our audio context. Will also work the first time we press "Turn on tuner"
 
@@ -56,7 +56,7 @@ class NoteDetector extends React.Component {
                 
                 //update the canvas every X ms with the new audio data. Refer to ./helper.js for implementation of the updateCanvas function
                 //intervalID stores the setInterval ID so that the interval can be cleared later (using clearInterval(intervalID) method) when the user stops the tuner. Otherwise, this will be called forever
-                intervalID = setInterval(updateCanvas, 10, this.state.canvas, analyzer, uint8view, bufferLength);
+                intervalID = setInterval(updateCanvas, 1, this.state.canvas, analyzer, uint8view, bufferLength, sampleRate);
             
             } catch(err){
                 console.log("The following getUserMedia error occured: " + err);//catching any errors that may have been generated due to a failure in gaining permission to record audio, etc.
@@ -83,11 +83,14 @@ class NoteDetector extends React.Component {
 
     //Creating the canvas look I want and storing a reference to the canvas that was rendered to the DOM in the state to be able to update it later
     componentDidMount(){
+        //getting the canvas we rendered with the id "canvas"
+        let temp_canvas = document.getElementById("canvas");
+        
         //calling the helper function that's meant to clear the canvas after the user turns off the tuner. I want to do the same to the canvas when it first renders
-        clearCanvas(document.getElementById("canvas"));
+        clearCanvas(temp_canvas);
         
         this.setState({
-            canvas: document.getElementById("canvas")
+            canvas: temp_canvas
         });
     }
 
@@ -96,6 +99,7 @@ class NoteDetector extends React.Component {
             <div id="listening">
                 <button type="button" id="start" onClick={() => this.getAudioPermission()}>{this.state.button_text}</button>
                 <canvas id="canvas" width={300} height={300}></canvas>
+                <p id="note"></p>
             </div>
         );
     }
